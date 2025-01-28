@@ -13,13 +13,9 @@
         let interval;
         let spawnInterval;
         let redEnvelopes = []; // 儲存多個紅包
-        let receivedEnvelopes = []; // 儲存接到的紅包資料
         let paddle;
         let gravityScale = 0.3;
         const redEnvelopeTexture = "/red_envelope.jpg";
-
-        // 紅包來源名稱列表
-        const redEnvelopeSources = ["大姨丈", "表哥", "小姨", "叔叔", "阿公", "阿嬤", "堂姐", "舅舅"];
 
         function startGame() {
             if (gameActive) return;
@@ -27,11 +23,9 @@
             totalAmount = 0;
             timer = 30;
             gravityScale = 0.3;
-            receivedEnvelopes = [];
             document.getElementById('total-amount').innerText = "累計收到: 0 元";
             document.getElementById('timer').innerText = `剩餘時間: ${timer} 秒`;
             document.getElementById('end-message').style.display = 'none';
-            document.getElementById('red-envelope-log').innerHTML = "";
             interval = setInterval(updateTimer, 1000);
 
             // 每隔 1 秒生成一個紅包
@@ -56,13 +50,11 @@
             clearInterval(spawnInterval);
             gameActive = false;
 
-            // 顯示結束訊息和紅包列表
+            // 顯示結束訊息和總金額
             const endMessage = document.getElementById('end-message');
-            let logList = receivedEnvelopes.map(e => `<li>${e.source} 給了 ${e.amount} 元</li>`).join('');
             endMessage.innerHTML = `
                 <h2>新年快樂！</h2>
                 <p>這是你今年的紅包總額：<strong>${totalAmount} 元</strong></p>
-                <ul>${logList}</ul>
                 <button class="button" onclick="startGame()">再玩一次</button>
             `;
             endMessage.style.display = 'block';
@@ -79,16 +71,18 @@
                 }
             });
 
-            // 隨機選取紅包來源和金額
-            const source = redEnvelopeSources[Math.floor(Math.random() * redEnvelopeSources.length)];
+            // 隨機生成紅包金額
             const amount = (Math.floor(Math.random() * 10) + 1) * 100; // 100 至 1000 的隨機金額
-            redEnvelope.customData = { source, amount }; // 將來源和金額存入紅包的自訂屬性
+            redEnvelope.customData = { amount }; // 將金額存入紅包的自訂屬性
 
             redEnvelopes.push(redEnvelope);
             Matter.World.add(world, redEnvelope);
         }
 
         function setupPhysics() {
+            const canvasWidth = Math.min(window.innerWidth * 0.9, 500); // 畫布寬度為螢幕寬度的 90% 或最大 500px
+            const canvasHeight = canvasWidth; // 保持正方形比例
+
             engine = Matter.Engine.create();
             world = engine.world;
             engine.world.gravity.y = gravityScale;
@@ -97,21 +91,20 @@
                 element: document.getElementById("game-canvas"),
                 engine: engine,
                 options: {
-                    width: 500,
-                    height: 500,
+                    width: canvasWidth,
+                    height: canvasHeight,
                     wireframes: false,
                     background: "#f2d16b"
                 }
             });
 
-            const ground = Matter.Bodies.rectangle(250, 480, 500, 20, { isStatic: true });
+            const ground = Matter.Bodies.rectangle(canvasWidth / 2, canvasHeight - 10, canvasWidth, 20, { isStatic: true });
             const walls = [
-                Matter.Bodies.rectangle(0, 250, 20, 500, { isStatic: true }),
-                Matter.Bodies.rectangle(500, 250, 20, 500, { isStatic: true })
+                Matter.Bodies.rectangle(0, canvasHeight / 2, 20, canvasHeight, { isStatic: true }),
+                Matter.Bodies.rectangle(canvasWidth, canvasHeight / 2, 20, canvasHeight, { isStatic: true })
             ];
 
-            // 縮小的擋板
-            paddle = Matter.Bodies.rectangle(250, 450, 100, 15, {
+            paddle = Matter.Bodies.rectangle(canvasWidth / 2, canvasHeight - 50, canvasWidth * 0.2, 15, {
                 isStatic: true,
                 render: { fillStyle: "red" }
             });
@@ -126,17 +119,8 @@
                 event.pairs.forEach(pair => {
                     redEnvelopes.forEach((redEnvelope, index) => {
                         if ((pair.bodyA === redEnvelope && pair.bodyB === paddle) || (pair.bodyB === redEnvelope && pair.bodyA === paddle)) {
-                            const { source, amount } = redEnvelope.customData; // 取得來源和金額
+                            const { amount } = redEnvelope.customData; // 取得金額
                             totalAmount += amount;
-
-                            // 記錄紅包資訊
-                            receivedEnvelopes.push({ source, amount });
-
-                            // 動態顯示紅包紀錄
-                            const logDiv = document.getElementById('red-envelope-log');
-                            const logItem = document.createElement('div');
-                            logItem.textContent = `${source} 給了 ${amount} 元`;
-                            logDiv.appendChild(logItem);
 
                             document.getElementById('total-amount').innerText = `累計收到: ${totalAmount} 元`;
                             Matter.World.remove(world, redEnvelope);
@@ -160,13 +144,16 @@
         }
 
         function enablePaddleControl() {
-            document.addEventListener("keydown", function(event) {
-                if (event.key === "ArrowLeft") {
-                    Matter.Body.setPosition(paddle, { x: Math.max(paddle.position.x - 30, 50), y: 450 });
-                } else if (event.key === "ArrowRight") {
-                    Matter.Body.setPosition(paddle, { x: Math.min(paddle.position.x + 30, 450), y: 450 });
-                }
-            });
+            const gameCanvas = document.getElementById("game-canvas");
+            gameCanvas.addEventListener("touchstart", handleTouch);
+            gameCanvas.addEventListener("touchmove", handleTouch);
+
+            function handleTouch(event) {
+                const touchX = event.touches[0].clientX;
+                const canvasRect = gameCanvas.getBoundingClientRect();
+                const relativeX = touchX - canvasRect.left; // 計算觸控相對於畫布的 X 座標
+                Matter.Body.setPosition(paddle, { x: Math.max(50, Math.min(450, relativeX)), y: 450 });
+            }
         }
 
         window.onload = function() {
@@ -186,33 +173,16 @@
             flex-direction: column;
             align-items: center;
         }
-        .button {
-            background-color: #ff4500;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 10px;
-        }
+
         .game-container {
             position: relative;
-            width: 500px;
-            height: 500px;
+            width: 90%; /* 畫布寬度為螢幕寬度的 90% */
+            max-width: 500px;
             margin: auto;
             border: 2px solid #ff4500;
             background: #f2d16b;
         }
-        .log-container {
-            width: 200px;
-            margin-left: 20px;
-            background: #fff7e6;
-            border: 1px solid #ff4500;
-            padding: 10px;
-            overflow-y: auto;
-            max-height: 500px;
-        }
+
         #end-message {
             display: none;
             position: absolute;
@@ -225,11 +195,20 @@
             text-align: center;
             padding-top: 150px;
         }
+
+        .button {
+            background-color: #ff4500;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
         .amount-display {
             margin: 10px 0;
-        }
-        .main-container {
-            display: flex;
         }
     </style>
 </head>
@@ -237,11 +216,8 @@
 <h1>紅包彈珠台遊戲</h1>
 <button class="button" onclick="startGame()">開始遊戲</button>
 <div id="timer" class="amount-display">按下開始遊戲</div>
-<div class="main-container">
-    <div class="game-container" id="game-canvas">
-        <div id="end-message"></div>
-    </div>
-    <div class="log-container" id="red-envelope-log"></div>
+<div class="game-container" id="game-canvas">
+    <div id="end-message"></div>
 </div>
 <div class="amount-display">
     <p id="total-amount">累計收到: 0 元</p>
