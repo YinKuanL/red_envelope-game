@@ -18,7 +18,12 @@
         let gravityScale = 0.3;
         const redEnvelopeTexture = "/red_envelope.jpg";
 
-        const redEnvelopeSources = ["大姨丈", "表哥", "小姨", "叔叔", "阿公", "阿嬤", "堂姐", "舅舅"];
+        const redEnvelopeSources = [
+            "大姨丈", "表哥", "小姨", "叔叔", "阿公", "阿嬤", "堂姐", "舅舅",
+            "大伯", "二姨", "小舅", "堂弟", "表妹", "姑媽", "外公", "外婆",
+            "大舅", "堂兄", "表姐", "小姑", "大舅媽", "二舅", "小堂妹", "二表哥",
+            "大表姐", "三叔公", "表妹夫", "大表弟", "四姑", "外甥"
+        ];
 
         function startGame() {
             if (gameActive) return;
@@ -240,7 +245,7 @@
     </style>
 </head>
 <body>
-<h1>紅包彈珠台遊戲</h1>
+<h1>賺紅包</h1>
 <button class="button" onclick="startGame()">開始遊戲</button>
 <div id="timer" class="amount-display">按下開始遊戲</div>
 <div class="game-container" id="game-canvas"></div>
