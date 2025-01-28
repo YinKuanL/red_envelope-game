@@ -17,6 +17,9 @@
         let gravityScale = 0.3;
         const redEnvelopeTexture = "/red_envelope.jpg";
 
+        // 紅包來源列表
+        const redEnvelopeSources = ["大姨丈", "表哥", "小姨", "叔叔", "阿公", "阿嬤", "堂姐", "舅舅"];
+
         function startGame() {
             if (gameActive) return;
             gameActive = true;
@@ -26,6 +29,7 @@
             document.getElementById('total-amount').innerText = "累計收到: 0 元";
             document.getElementById('timer').innerText = `剩餘時間: ${timer} 秒`;
             document.getElementById('end-message').style.display = 'none';
+            document.getElementById('red-envelope-log').innerHTML = ""; // 清空右側紀錄
             interval = setInterval(updateTimer, 1000);
 
             // 每隔 1 秒生成一個紅包
@@ -50,7 +54,7 @@
             clearInterval(spawnInterval);
             gameActive = false;
 
-            // 顯示結束訊息和總金額
+            // 顯示結束訊息
             const endMessage = document.getElementById('end-message');
             endMessage.innerHTML = `
                 <h2>新年快樂！</h2>
@@ -71,9 +75,10 @@
                 }
             });
 
-            // 隨機生成紅包金額
+            // 隨機生成紅包來源和金額
+            const source = redEnvelopeSources[Math.floor(Math.random() * redEnvelopeSources.length)];
             const amount = (Math.floor(Math.random() * 10) + 1) * 100; // 100 至 1000 的隨機金額
-            redEnvelope.customData = { amount }; // 將金額存入紅包的自訂屬性
+            redEnvelope.customData = { source, amount }; // 將來源和金額存入紅包的自訂屬性
 
             redEnvelopes.push(redEnvelope);
             Matter.World.add(world, redEnvelope);
@@ -119,9 +124,16 @@
                 event.pairs.forEach(pair => {
                     redEnvelopes.forEach((redEnvelope, index) => {
                         if ((pair.bodyA === redEnvelope && pair.bodyB === paddle) || (pair.bodyB === redEnvelope && pair.bodyA === paddle)) {
-                            const { amount } = redEnvelope.customData; // 取得金額
+                            const { source, amount } = redEnvelope.customData; // 取得來源和金額
                             totalAmount += amount;
 
+                            // 更新右側紀錄
+                            const logDiv = document.getElementById('red-envelope-log');
+                            const logItem = document.createElement('div');
+                            logItem.textContent = `${source} 給了 ${amount} 元`;
+                            logDiv.appendChild(logItem);
+
+                            // 更新累計金額
                             document.getElementById('total-amount').innerText = `累計收到: ${totalAmount} 元`;
                             Matter.World.remove(world, redEnvelope);
                             redEnvelopes.splice(index, 1); // 從陣列中移除紅包
@@ -174,6 +186,14 @@
             align-items: center;
         }
 
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+        }
+
         .game-container {
             position: relative;
             width: 90%; /* 畫布寬度為螢幕寬度的 90% */
@@ -181,6 +201,16 @@
             margin: auto;
             border: 2px solid #ff4500;
             background: #f2d16b;
+        }
+
+        .log-container {
+            width: 200px;
+            margin-left: 20px;
+            background: #fff7e6;
+            border: 1px solid #ff4500;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 500px;
         }
 
         #end-message {
@@ -216,8 +246,11 @@
 <h1>紅包彈珠台遊戲</h1>
 <button class="button" onclick="startGame()">開始遊戲</button>
 <div id="timer" class="amount-display">按下開始遊戲</div>
-<div class="game-container" id="game-canvas">
-    <div id="end-message"></div>
+<div class="main-container">
+    <div class="game-container" id="game-canvas">
+        <div id="end-message"></div>
+    </div>
+    <div class="log-container" id="red-envelope-log"></div>
 </div>
 <div class="amount-display">
     <p id="total-amount">累計收到: 0 元</p>
