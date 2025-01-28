@@ -18,6 +18,8 @@
         let gravityScale = 0.3;
         const redEnvelopeTexture = "/red_envelope.jpg";
 
+        const redEnvelopeSources = ["大姨丈", "表哥", "小姨", "叔叔", "阿公", "阿嬤", "堂姐", "舅舅"];
+
         function startGame() {
             if (gameActive) return;
             gameActive = true;
@@ -73,6 +75,13 @@
                 }
             });
 
+            // 隨機生成紅包金額，並記錄是否已經計算過
+            redEnvelope.customData = {
+                source: redEnvelopeSources[Math.floor(Math.random() * redEnvelopeSources.length)],
+                amount: (Math.floor(Math.random() * 10) + 1) * 100,
+                collected: false
+            };
+
             // 將紅包加入世界
             redEnvelopes.push(redEnvelope);
             Matter.World.add(world, redEnvelope);
@@ -113,6 +122,39 @@
             Matter.Render.run(render);
         }
 
+        function checkCollisions() {
+            Matter.Events.on(engine, "collisionStart", function(event) {
+                event.pairs.forEach(pair => {
+                    redEnvelopes.forEach((redEnvelope, index) => {
+                        // 檢測與擋板的碰撞
+                        if ((pair.bodyA === redEnvelope && pair.bodyB === paddle) || (pair.bodyB === redEnvelope && pair.bodyA === paddle)) {
+                            if (!redEnvelope.customData.collected) { // 確保金額只計算一次
+                                totalAmount += redEnvelope.customData.amount;
+                                redEnvelope.customData.collected = true; // 標記為已計算
+                                document.getElementById('total-amount').innerText = `累計收到: ${totalAmount} 元`;
+
+                                // 更新底部紀錄
+                                const logDiv = document.getElementById('red-envelope-log');
+                                const logItem = document.createElement('div');
+                                logItem.textContent = `${redEnvelope.customData.source} 給了 ${redEnvelope.customData.amount} 元`;
+                                logDiv.appendChild(logItem);
+                            }
+
+                            // 移除紅包
+                            Matter.World.remove(world, redEnvelope);
+                            redEnvelopes.splice(index, 1);
+                        }
+
+                        // 檢測與地面的碰撞
+                        if ((pair.bodyA === redEnvelope && pair.bodyB === ground) || (pair.bodyB === redEnvelope && pair.bodyA === ground)) {
+                            Matter.World.remove(world, redEnvelope);
+                            redEnvelopes.splice(index, 1); // 從陣列中移除紅包
+                        }
+                    });
+                });
+            });
+        }
+
         function enablePaddleControl() {
             const gameCanvas = document.getElementById("game-canvas");
             const canvasRect = gameCanvas.getBoundingClientRect();
@@ -129,20 +171,6 @@
                 const clampedX = Math.max(50, Math.min(canvasRect.width - 50, relativeX));
                 Matter.Body.setPosition(paddle, { x: clampedX, y: canvasRect.height - 50 });
             }
-        }
-
-        function checkCollisions() {
-            Matter.Events.on(engine, "collisionStart", function(event) {
-                event.pairs.forEach(pair => {
-                    redEnvelopes.forEach((redEnvelope, index) => {
-                        // 檢測與地面的碰撞
-                        if ((pair.bodyA === redEnvelope && pair.bodyB === ground) || (pair.bodyB === redEnvelope && pair.bodyA === ground)) {
-                            Matter.World.remove(world, redEnvelope);
-                            redEnvelopes.splice(index, 1); // 從陣列中移除紅包
-                        }
-                    });
-                });
-            });
         }
 
         window.onload = function() {
@@ -171,6 +199,30 @@
             background: #f2d16b;
         }
 
+        .log-container {
+            width: 90%;
+            max-width: 500px;
+            margin-top: 10px;
+            background: #fff7e6;
+            border: 1px solid #ff4500;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 150px; /* 限制紀錄高度 */
+        }
+
+        #end-message {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            text-align: center;
+            padding-top: 150px;
+        }
+
         .button {
             background-color: #ff4500;
             color: white;
@@ -192,8 +244,10 @@
 <button class="button" onclick="startGame()">開始遊戲</button>
 <div id="timer" class="amount-display">按下開始遊戲</div>
 <div class="game-container" id="game-canvas"></div>
+<div class="log-container" id="red-envelope-log"></div>
 <div class="amount-display">
     <p id="total-amount">累計收到: 0 元</p>
 </div>
+<div id="end-message"></div>
 </body>
 </html>
