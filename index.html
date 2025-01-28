@@ -14,6 +14,7 @@
         let spawnInterval;
         let redEnvelopes = []; // 儲存多個紅包
         let paddle;
+        let ground; // 地面物件
         let gravityScale = 0.3;
         const redEnvelopeTexture = "/red_envelope.jpg";
 
@@ -103,7 +104,7 @@
                 }
             });
 
-            const ground = Matter.Bodies.rectangle(canvasWidth / 2, canvasHeight - 10, canvasWidth, 20, { isStatic: true });
+            ground = Matter.Bodies.rectangle(canvasWidth / 2, canvasHeight - 10, canvasWidth, 20, { isStatic: true });
             const walls = [
                 Matter.Bodies.rectangle(0, canvasHeight / 2, 20, canvasHeight, { isStatic: true }),
                 Matter.Bodies.rectangle(canvasWidth, canvasHeight / 2, 20, canvasHeight, { isStatic: true })
@@ -123,6 +124,7 @@
             Matter.Events.on(engine, "collisionStart", function(event) {
                 event.pairs.forEach(pair => {
                     redEnvelopes.forEach((redEnvelope, index) => {
+                        // 檢測與擋板的碰撞
                         if ((pair.bodyA === redEnvelope && pair.bodyB === paddle) || (pair.bodyB === redEnvelope && pair.bodyA === paddle)) {
                             const { source, amount } = redEnvelope.customData; // 取得來源和金額
                             totalAmount += amount;
@@ -138,21 +140,15 @@
                             Matter.World.remove(world, redEnvelope);
                             redEnvelopes.splice(index, 1); // 從陣列中移除紅包
                         }
+
+                        // 檢測與地面的碰撞
+                        if ((pair.bodyA === redEnvelope && pair.bodyB === ground) || (pair.bodyB === redEnvelope && pair.bodyA === ground)) {
+                            Matter.World.remove(world, redEnvelope);
+                            redEnvelopes.splice(index, 1); // 從陣列中移除紅包
+                        }
                     });
                 });
             });
-        }
-
-        function removeOffscreenEnvelopes() {
-            setInterval(() => {
-                redEnvelopes = redEnvelopes.filter(redEnvelope => {
-                    if (redEnvelope.position.y > 500) { // 超出畫面高度
-                        Matter.World.remove(world, redEnvelope);
-                        return false;
-                    }
-                    return true;
-                });
-            }, 100);
         }
 
         function enablePaddleControl() {
@@ -172,7 +168,6 @@
             setupPhysics();
             checkCollisions();
             enablePaddleControl();
-            removeOffscreenEnvelopes(); // 定期移除超出畫面的紅包
         };
     </script>
     <style>
