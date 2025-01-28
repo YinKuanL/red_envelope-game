@@ -29,7 +29,7 @@
             document.getElementById('total-amount').innerText = "累計收到: 0 元";
             document.getElementById('timer').innerText = `剩餘時間: ${timer} 秒`;
             document.getElementById('end-message').style.display = 'none';
-            document.getElementById('red-envelope-log').innerHTML = ""; // 清空右側紀錄
+            document.getElementById('red-envelope-log').innerHTML = ""; // 清空紀錄
             interval = setInterval(updateTimer, 1000);
 
             // 每隔 1 秒生成一個紅包
@@ -127,7 +127,7 @@
                             const { source, amount } = redEnvelope.customData; // 取得來源和金額
                             totalAmount += amount;
 
-                            // 更新右側紀錄
+                            // 更新底部紀錄
                             const logDiv = document.getElementById('red-envelope-log');
                             const logItem = document.createElement('div');
                             logItem.textContent = `${source} 給了 ${amount} 元`;
@@ -164,7 +164,7 @@
                 const touchX = event.touches[0].clientX;
                 const canvasRect = gameCanvas.getBoundingClientRect();
                 const relativeX = touchX - canvasRect.left; // 計算觸控相對於畫布的 X 座標
-                Matter.Body.setPosition(paddle, { x: Math.max(50, Math.min(450, relativeX)), y: 450 });
+                Matter.Body.setPosition(paddle, { x: Math.max(50, Math.min(canvasRect.width - 50, relativeX)), y: 450 });
             }
         }
 
@@ -186,14 +186,6 @@
             align-items: center;
         }
 
-        .main-container {
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            justify-content: center;
-            width: 100%;
-        }
-
         .game-container {
             position: relative;
             width: 90%; /* 畫布寬度為螢幕寬度的 90% */
@@ -204,13 +196,14 @@
         }
 
         .log-container {
-            width: 200px;
-            margin-left: 20px;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 10px;
             background: #fff7e6;
             border: 1px solid #ff4500;
             padding: 10px;
             overflow-y: auto;
-            max-height: 500px;
+            max-height: 150px; /* 限制紀錄高度 */
         }
 
         #end-message {
@@ -246,12 +239,10 @@
 <h1>紅包彈珠台遊戲</h1>
 <button class="button" onclick="startGame()">開始遊戲</button>
 <div id="timer" class="amount-display">按下開始遊戲</div>
-<div class="main-container">
-    <div class="game-container" id="game-canvas">
-        <div id="end-message"></div>
-    </div>
-    <div class="log-container" id="red-envelope-log"></div>
+<div class="game-container" id="game-canvas">
+    <div id="end-message"></div>
 </div>
+<div class="log-container" id="red-envelope-log"></div>
 <div class="amount-display">
     <p id="total-amount">累計收到: 0 元</p>
 </div>
